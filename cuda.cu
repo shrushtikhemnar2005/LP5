@@ -1,13 +1,5 @@
-# LP5
-
-
-
-
-
-
-
-
 !nvidia-smi
+
 
 %%writefile cuda_program.cu
 
@@ -107,7 +99,7 @@ int main() {
 
         cudaEventRecord(start);
 
-        vectorAdd<<>>(d_a, d_b, d_c, n);
+        vectorAdd<<<blocks, threads>>>(d_a, d_b, d_c, n);
 
         cudaEventRecord(end);
         cudaEventSynchronize(end);
@@ -198,7 +190,7 @@ int main() {
 
         cudaEventRecord(start);
 
-        matrixMultiplication<<>>(
+        matrixMultiplication<<<blocksPerGrid, threadsPerBlock>>>(
             d_a, d_b, d_c, n
         );
 
@@ -268,162 +260,12 @@ int main() {
 }
 
 
+
 !nvcc cuda_program.cu -o cuda_program
 
 !printf "1\n5\n1 2 3 4 5\n10 20 30 40 50\n" | ./cuda_program
 
-
 !printf "2\n3\n1 2 3\n4 5 6\n7 8 9\n1 0 0\n0 1 0\n0 0 1\n" | ./cuda_program
 
 
-
-
-
-
-## HPC 3
-#include <iostream>
-#include <vector>
-#include <climits>
-#include <omp.h>
-#include <chrono>
-
-using namespace std;
-using namespace std::chrono;
-
-class ParallelReducer {
-private:
-    vector<int> arr;
-
-public:
-    ParallelReducer(const vector<int>& input) : arr(input) {}
-
-    // ---------------- PARALLEL MIN ----------------
-    int parallelMin() {
-        int min_val = INT_MAX;
-
-        #pragma omp parallel for reduction(min:min_val)
-        for (int i = 0; i < arr.size(); i++) {
-            if (arr[i] < min_val)
-                min_val = arr[i];
-        }
-
-        return min_val;
-    }
-
-    // ---------------- PARALLEL MAX ----------------
-    int parallelMax() {
-        int max_val = INT_MIN;
-
-        #pragma omp parallel for reduction(max:max_val)
-        for (int i = 0; i < arr.size(); i++) {
-            if (arr[i] > max_val)
-                max_val = arr[i];
-        }
-
-        return max_val;
-    }
-
-    // ---------------- PARALLEL SUM ----------------
-    int parallelSum() {
-        int sum = 0;
-
-        #pragma omp parallel for reduction(+:sum)
-        for (int i = 0; i < arr.size(); i++) {
-            sum += arr[i];
-        }
-
-        return sum;
-    }
-
-    // ---------------- PARALLEL AVERAGE ----------------
-    double parallelAverage() {
-        double total = parallelSum();
-        return total / arr.size();
-    }
-};
-
-int main() {
-    int size;
-
-    cout << "Enter size of the array: ";
-    cin >> size;
-
-    vector<int> data(size);
-
-    cout << "Enter " << size << " elements:\n";
-
-    for (int i = 0; i < size; i++)
-        cin >> data[i];
-
-    ParallelReducer reducer(data);
-
-    // ---------------- MINIMUM ----------------
-    auto startMin = high_resolution_clock::now();
-
-    int minResult = reducer.parallelMin();
-
-    auto endMin = high_resolution_clock::now();
-
-    auto durationMin =
-        duration_cast<microseconds>(endMin - startMin);
-
-    cout << "\nParallel Minimum: "
-         << minResult << endl;
-
-    cout << "Execution Time (Min): "
-         << durationMin.count()
-         << " microseconds\n";
-
-    // ---------------- MAXIMUM ----------------
-    auto startMax = high_resolution_clock::now();
-
-    int maxResult = reducer.parallelMax();
-
-    auto endMax = high_resolution_clock::now();
-
-    auto durationMax =
-        duration_cast<microseconds>(endMax - startMax);
-
-    cout << "\nParallel Maximum: "
-         << maxResult << endl;
-
-    cout << "Execution Time (Max): "
-         << durationMax.count()
-         << " microseconds\n";
-
-    // ---------------- SUM ----------------
-    auto startSum = high_resolution_clock::now();
-
-    int sumResult = reducer.parallelSum();
-
-    auto endSum = high_resolution_clock::now();
-
-    auto durationSum =
-        duration_cast<microseconds>(endSum - startSum);
-
-    cout << "\nParallel Sum: "
-         << sumResult << endl;
-
-    cout << "Execution Time (Sum): "
-         << durationSum.count()
-         << " microseconds\n";
-
-    // ---------------- AVERAGE ----------------
-    auto startAvg = high_resolution_clock::now();
-
-    double avgResult = reducer.parallelAverage();
-
-    auto endAvg = high_resolution_clock::now();
-
-    auto durationAvg =
-        duration_cast<microseconds>(endAvg - startAvg);
-
-    cout << "\nParallel Average: "
-         << avgResult << endl;
-
-    cout << "Execution Time (Average): "
-         << durationAvg.count()
-         << " microseconds\n";
-
-    return 0;
-}
+  
